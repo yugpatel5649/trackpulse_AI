@@ -1,0 +1,361 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackPulse AI — Dynamic Train ETA Forecasting | Indian Railways SIH 2026 PS 26028</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'icons/train-svgrepo-com.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{% static 'css/eta_style.css' %}?v=1.0">
+</head>
+<body class="eta-theme">
+
+  <!-- Control Room Command Header -->
+  <header class="eta-header">
+    <div class="header-container">
+      <div class="brand-block">
+        <div class="brand-badge-pulse"></div>
+        <div class="brand-text">
+          <div class="brand-row">
+            <h1 class="brand-title">TRACKPULSE AI</h1>
+            <span class="ps-badge">SIH 2026 • PS 26028</span>
+            <span class="simulated-badge">PROTOTYPE SIMULATED LIVE FEED</span>
+          </div>
+          <p class="brand-subtitle">INDIAN RAILWAYS — DYNAMIC EXPECTED TIME OF ARRIVAL (ETA) FORECASTING</p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="system-status">
+          <span class="pulse-indicator"></span>
+          <span id="lastUpdatedLabel">Live Sync Active (10s)</span>
+        </div>
+        <a href="/block-planning/" class="btn-preserved-system" title="Switch to SIH 26027 RailBlock AI System">
+          <span class="icon">⚡</span> RailBlock AI (PS 26027)
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="eta-container">
+
+    <!-- KPI Metric Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card glass-panel">
+        <div class="kpi-icon text-cyan">🚆</div>
+        <div class="kpi-content">
+          <div class="kpi-label">Active Trains Monitored</div>
+          <div class="kpi-value" id="kpiActiveTrains">{{ active_trains_count }}</div>
+          <div class="kpi-sub">Mumbai Central – Ahmedabad Corridor</div>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-icon text-amber">⏱️</div>
+        <div class="kpi-content">
+          <div class="kpi-label">Average System Delay</div>
+          <div class="kpi-value" id="kpiAvgDelay">+{{ avg_delay_minutes }} min</div>
+          <div class="kpi-sub">Dynamic Live Feed Weighted Avg</div>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-icon text-green">🧠</div>
+        <div class="kpi-content">
+          <div class="kpi-label">ETA Engine Status</div>
+          <div class="kpi-value text-green-glow" id="kpiEngineStatus">Online • ML v1.2</div>
+          <div class="kpi-sub">Multi-Factor Statistical Forecast</div>
+        </div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-icon text-blue">📡</div>
+        <div class="kpi-content">
+          <div class="kpi-label">Live Data Refresh</div>
+          <div class="kpi-value" id="kpiSyncStatus">10s Auto</div>
+          <div class="kpi-sub">Simulated Railway Data Layer</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Dual Grid -->
+    <div class="main-layout">
+
+      <!-- Left Column: Live Trains List & Simulation Control -->
+      <div class="layout-left">
+        
+        <!-- Live Trains Table Card -->
+        <div class="card glass-panel">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">🔴</span> Live Coaching Train Telemetry
+            </div>
+            <span class="live-tag">LIVE FEED</span>
+          </div>
+          <div class="table-responsive">
+            <table class="eta-table" id="trainsTable">
+              <thead>
+                <tr>
+                  <th>Train</th>
+                  <th>Current Location</th>
+                  <th>Speed</th>
+                  <th>Current Delay</th>
+                  <th>Destination ETA</th>
+                  <th>Confidence</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="trainsTableBody">
+                {% for t in trains %}
+                <tr class="train-row {% if forloop.first %}selected-row{% endif %}" data-train-number="{{ t.train_number }}" onclick="selectTrain('{{ t.train_number }}')">
+                  <td>
+                    <div class="train-name-cell">
+                      <span class="train-no">{{ t.train_number }}</span>
+                      <span class="train-title">{{ t.train_name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="location-cell">
+                      <span class="current-st">{{ t.current_station }}</span>
+                      <span class="next-st">➔ {{ t.next_station }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="speed-badge">{{ t.current_speed_kmh|floatformat:0 }} km/h</span>
+                  </td>
+                  <td>
+                    {% if t.current_delay_minutes > 10 %}
+                      <span class="delay-badge delay-high">+{{ t.current_delay_minutes }} min</span>
+                    {% elif t.current_delay_minutes > 0 %}
+                      <span class="delay-badge delay-medium">+{{ t.current_delay_minutes }} min</span>
+                    {% else %}
+                      <span class="delay-badge delay-on-time">ON TIME</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="eta-cell">
+                      <span class="pred-eta">{{ t.destination_predicted_eta }}</span>
+                      <span class="sched-eta">Sched: {{ t.destination_scheduled_eta }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="confidence-pill">
+                      <span class="conf-value">{{ t.overall_confidence_score }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <button class="btn-select-train" onclick="event.stopPropagation(); selectTrain('{{ t.train_number }}')">Inspect</button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Dynamic Event Simulation Console (For Judges / Demonstration) -->
+        <div class="card glass-panel simulation-card">
+          <div class="card-header">
+            <div class="card-title text-amber">
+              <span class="icon">🎮</span> Dynamic Event Simulation Console
+            </div>
+            <span class="sim-tag">HACKATHON DEMO CONTROLLER</span>
+          </div>
+          <p class="sim-desc">
+            Inject real-time operational events to evaluate how TrackPulse AI dynamically recalculates ETA forecasts, delay propagation, and confidence metrics in real time.
+          </p>
+
+          <div class="simulation-controls">
+            <div class="sim-row">
+              <label for="simTrainSelect">Select Target Train:</label>
+              <select id="simTrainSelect" class="sim-select">
+                <option value="ALL">All Active Trains</option>
+                {% for t in trains %}
+                  <option value="{{ t.train_number }}">{{ t.train_number }} — {{ t.train_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="sim-btn-group">
+              <button class="btn-sim sim-delay" onclick="triggerSimulation('ADD_DELAY', 10)">
+                <span>+10m Delay</span>
+              </button>
+              <button class="btn-sim sim-congestion" onclick="triggerSimulation('CONGESTION', 8)">
+                <span>Signal Hold / Congestion</span>
+              </button>
+              <button class="btn-sim sim-stop" onclick="triggerSimulation('UNSCHEDULED_STOP', 12)">
+                <span>Unscheduled Stop</span>
+              </button>
+              <button class="btn-sim sim-weather" onclick="triggerSimulation('WEATHER_FOG', 15)">
+                <span>Fog / Weather Impact</span>
+              </button>
+              <button class="btn-sim sim-clear" onclick="triggerSimulation('CLEAR', 0)">
+                <span>Clear Track (Normal)</span>
+              </button>
+              <button class="btn-sim sim-reset" onclick="resetSimulationFeed()">
+                <span>Reset Baseline</span>
+              </button>
+            </div>
+          </div>
+          <div id="simNotice" class="sim-notice"></div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Detail View, Baseline vs Dynamic ETA & Charts -->
+      <div class="layout-right">
+
+        <!-- Selected Train Summary & Comparison Card -->
+        <div class="card glass-panel" id="detailCard">
+          <div class="card-header">
+            <div class="card-title" id="selectedTrainTitle">
+              <span class="icon">🎯</span> Train Forecast Breakdown: {{ selected_train.train_number }} - {{ selected_train.train_name }}
+            </div>
+            <span class="train-type-pill" id="selectedTrainType">{{ selected_train.train_type }}</span>
+          </div>
+
+          <!-- Baseline vs Dynamic AI ETA Comparison Banner -->
+          <div class="eta-comparison-banner">
+            <div class="eta-cmp-box sched-box">
+              <div class="cmp-label">STATIC / SCHEDULED ETA</div>
+              <div class="cmp-value" id="cmpSchedEta">{{ selected_train.destination_scheduled_eta }}</div>
+              <div class="cmp-sub" id="cmpDestName">{{ selected_train.destination_name }}</div>
+            </div>
+
+            <div class="eta-cmp-divider">
+              <div class="cmp-arrow">➔</div>
+              <div class="cmp-diff-badge" id="cmpDiffBadge">+{{ selected_train.destination_delay_minutes }} MIN DELAY</div>
+            </div>
+
+            <div class="eta-cmp-box dynamic-box">
+              <div class="cmp-label">DYNAMIC AI FORECAST ETA</div>
+              <div class="cmp-value" id="cmpDynamicEta">{{ selected_train.destination_predicted_eta }}</div>
+              <div class="cmp-sub">Engine Confidence: <strong id="cmpConfidence">{{ selected_train.overall_confidence_score }}%</strong></div>
+            </div>
+          </div>
+
+          <!-- Live Operational Context Bar -->
+          <div class="operational-bar">
+            <div class="op-item">
+              <span class="op-label">Current Position:</span>
+              <span class="op-val" id="opLocation">{{ selected_train.current_location }}</span>
+            </div>
+            <div class="op-item">
+              <span class="op-label">Track Speed:</span>
+              <span class="op-val" id="opSpeed">{{ selected_train.current_speed_kmh|floatformat:0 }} km/h (Max: {{ selected_train.max_speed_kmh }} km/h)</span>
+            </div>
+            <div class="op-item">
+              <span class="op-label">Condition:</span>
+              <span class="op-val highlight-cond" id="opCondition">{{ selected_train.operational_condition }}</span>
+            </div>
+          </div>
+
+          <!-- Station-Wise Forecast Table -->
+          <div class="table-responsive station-table-wrap">
+            <h4 class="section-heading">Station-Wise ETA Forecast & Delay Propagation</h4>
+            <table class="eta-table station-table">
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>Dist (km)</th>
+                  <th>Sched ETA</th>
+                  <th>Predicted ETA</th>
+                  <th>Delay</th>
+                  <th>Confidence</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="stationForecastBody">
+                {% for st in selected_train.stations_forecast %}
+                <tr class="st-row st-{{ st.status|lower }}">
+                  <td>
+                    <strong>{{ st.name }}</strong>
+                    <span class="st-code">({{ st.code }})</span>
+                  </td>
+                  <td>{{ st.distance_km }} km</td>
+                  <td>{{ st.scheduled_eta }}</td>
+                  <td><strong class="text-cyan">{{ st.predicted_eta }}</strong></td>
+                  <td>
+                    {% if st.delay_minutes > 0 %}
+                      <span class="text-amber">+{{ st.delay_minutes }} min</span>
+                    {% else %}
+                      <span class="text-green">0 min</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="conf-bar-wrap">
+                      <div class="conf-bar" style="width: {{ st.confidence_score }}%;"></div>
+                      <span class="conf-num">{{ st.confidence_score }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="st-status-badge st-status-{{ st.status|lower }}">{{ st.status }}</span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Engine Feature Importance Panel -->
+        <div class="card glass-panel feature-card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">📊</span> Forecasting Engine Feature Weights & Input Data
+            </div>
+          </div>
+          <div class="feature-grid" id="featureWeightsContainer">
+            {% for f in selected_train.feature_weights %}
+            <div class="feature-item">
+              <div class="feature-name">{{ f.feature }}</div>
+              <div class="feature-weight">{{ f.weight }} Weight</div>
+              <div class="feature-val">{{ f.value }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Visual Analytics Section (2 Charts) -->
+        <div class="card glass-panel charts-card">
+          <div class="card-header">
+            <div class="card-title">
+              <span class="icon">📈</span> Route ETA Analytics & Delay Propagation
+            </div>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-box">
+              <h5>Scheduled vs Dynamic AI ETA (Arrival Minutes)</h5>
+              <canvas id="etaTimelineChart"></canvas>
+            </div>
+            <div class="chart-box">
+              <h5>Station Delay Propagation (Minutes)</h5>
+              <canvas id="delayPropagationChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="eta-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>TRACKPULSE AI</strong> • Indian Railways Dynamic Train ETA Forecasting System • SIH 2026 Problem Statement 26028
+      </div>
+      <div class="footer-note">
+        <span>Architecture: Microservices API • Statistical ML Engine v1.2</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{% static 'js/eta_app.js' %}?v=1.0"></script>
+</body>
+</html>

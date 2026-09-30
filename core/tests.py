@@ -81,10 +81,10 @@ class RailBlockLagrangianE2ETest(TestCase):
     def test_pages_render_successfully(self):
         """Verify Main Dashboard and all 3 department views return HTTP 200."""
         endpoints = [
-            ('/', 'Corridor Master Block Timetable'),
-            ('/tms/', 'Track Management System (TMS)'),
-            ('/smms/', 'Signal Maintenance & Management System (SMMS)'),
-            ('/trd/', 'Traction Distribution System (TRD)'),
+            ('/block-planning/', 'Corridor Master Block Timetable'),
+            ('/block-planning/tms/', 'Track Management System (TMS)'),
+            ('/block-planning/smms/', 'Signal Maintenance & Management System (SMMS)'),
+            ('/block-planning/trd/', 'Traction Distribution System (TRD)'),
         ]
         for url, expected_text in endpoints:
             response = self.client.get(url)

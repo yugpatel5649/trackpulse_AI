@@ -1,24 +1,27 @@
 """
 URL configuration for railblock_project project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+SIH 2026 PS 26028 (TrackPulse AI Dynamic Train ETA) at '/'
+SIH 2026 PS 26027 (RailBlock AI Maintenance Block Planning) preserved at '/block-planning/'
 """
 from django.contrib import admin
 from django.urls import path, include
+from core import views as core_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('core.urls')),
-]
 
+    # SIH 2026 PS 26028 — Primary Dynamic Train ETA Forecast System
+    path('', include('eta.urls')),
+
+    # SIH 2026 PS 26027 — Preserved Maintenance Block Planning System
+    path('block-planning/', include('core.urls')),
+
+    # Direct legacy routes for 26027 AJAX endpoints
+    path('api/timeline-data/', core_views.api_timeline_data),
+    path('api/lagrangian-telemetry/', core_views.api_lagrangian_telemetry),
+    path('api/optimize/', core_views.api_lagrangian_telemetry),
+    path('api/submit-request/', core_views.submit_request),
+    path('api/cancel-request/<int:req_id>/', core_views.cancel_request),
+    path('api/approve-schedule/', core_views.api_toggle_schedule_approval),
+    path('api/reset/', core_views.api_reset_data),
+]

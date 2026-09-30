@@ -37,10 +37,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # RailBlock AI Apps
+    # RailBlock AI & TrackPulse AI Apps
+    'eta',
     'core',
     'scheduler',
 ]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
