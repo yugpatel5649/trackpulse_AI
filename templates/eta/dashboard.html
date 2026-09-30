@@ -8,147 +8,141 @@
   <link rel="icon" type="image/svg+xml" href="{% static 'icons/train-svgrepo-com.svg' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="{% static 'css/eta_style.css' %}?v=1.0">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=6.0">
 </head>
-<body class="eta-theme">
+<body>
 
-  <!-- Control Room Command Header -->
-  <header class="eta-header">
-    <div class="header-container">
-      <div class="brand-block">
-        <div class="brand-badge-pulse"></div>
-        <div class="brand-text">
-          <div class="brand-row">
-            <h1 class="brand-title">TRACKPULSE AI</h1>
-            <span class="ps-badge">SIH 2026 • PS 26028</span>
-            <span class="simulated-badge">PROTOTYPE SIMULATED LIVE FEED</span>
-          </div>
-          <p class="brand-subtitle">INDIAN RAILWAYS — DYNAMIC EXPECTED TIME OF ARRIVAL (ETA) FORECASTING</p>
+  <!-- Official Railway Command Bar (Reusing Original Website Theme) -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-section">
+        <span class="brand-badge">IR-COA</span>
+        <div class="brand-titles">
+          <h1>INDIAN RAILWAYS — CONTROL OFFICE APPLICATION</h1>
+          <span>TrackPulse AI • Dynamic Train ETA Forecasting • Ahmedabad Division (ADI)</span>
         </div>
       </div>
 
-      <div class="header-right">
-        <div class="system-status">
-          <span class="pulse-indicator"></span>
-          <span id="lastUpdatedLabel">Live Sync Active (10s)</span>
+      <!-- Center Branding & PS Badge -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="badge" style="background-color: #2563EB; color: #FFF; font-size: 11px; padding: 4px 8px; font-weight: 800;">
+          SIH 2026 • PS 26028
+        </span>
+        <span class="badge" style="background-color: #FFF4D6; color: #5A4200; border: 1px solid #B7791F; font-size: 11px; padding: 4px 8px; font-weight: 800;">
+          SIMULATED LIVE DATA
+        </span>
+      </div>
+
+      <!-- Global Actions -->
+      <div class="header-actions">
+        <div class="engine-status-pill">
+          <span style="display: inline-block; width: 8px; height: 8px; background-color: #16845B; border-radius: 50%;"></span>
+          <span id="lastUpdatedLabel">Live Sync: {{ last_updated }}</span>
         </div>
-        <a href="/block-planning/" class="btn-preserved-system" title="Switch to SIH 26027 RailBlock AI System">
-          <span class="icon">⚡</span> RailBlock AI (PS 26027)
-        </a>
+        <button class="btn btn-outline btn-sm" onclick="resetSimulationFeed()" title="Reset simulation to timetable baseline">
+          <span class="ui-icon" aria-hidden="true">🔄</span>
+          Reset Timetable
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="eta-container">
+  <!-- Main Content Container -->
+  <main class="main-container" style="max-width: 1440px; margin: 16px auto; padding: 0 18px; flex: 1;">
 
-    <!-- KPI Metric Cards -->
-    <section class="kpi-grid">
-      <div class="kpi-card glass-panel">
-        <div class="kpi-icon text-cyan">🚆</div>
-        <div class="kpi-content">
-          <div class="kpi-label">Active Trains Monitored</div>
-          <div class="kpi-value" id="kpiActiveTrains">{{ active_trains_count }}</div>
-          <div class="kpi-sub">Mumbai Central – Ahmedabad Corridor</div>
-        </div>
+    <!-- KPI Metrics Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
+      
+      <div class="panel" style="padding: 12px 16px; margin: 0; background: var(--bg-panel); border: 1px solid var(--border-strong);">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Monitored Trains</div>
+        <div style="font-size: 22px; font-weight: 900; color: var(--blue-primary); margin: 2px 0;" id="kpiActiveTrains">{{ active_trains_count }}</div>
+        <div style="font-size: 11px; color: var(--text-dim);">Mumbai – Ahmedabad Corridor</div>
       </div>
 
-      <div class="kpi-card glass-panel">
-        <div class="kpi-icon text-amber">⏱️</div>
-        <div class="kpi-content">
-          <div class="kpi-label">Average System Delay</div>
-          <div class="kpi-value" id="kpiAvgDelay">+{{ avg_delay_minutes }} min</div>
-          <div class="kpi-sub">Dynamic Live Feed Weighted Avg</div>
-        </div>
+      <div class="panel" style="padding: 12px 16px; margin: 0; background: var(--bg-panel); border: 1px solid var(--border-strong);">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Average Delay</div>
+        <div style="font-size: 22px; font-weight: 900; color: var(--gold-accent); margin: 2px 0;" id="kpiAvgDelay">+{{ avg_delay_minutes }} min</div>
+        <div style="font-size: 11px; color: var(--text-dim);">Live Corridor Average</div>
       </div>
 
-      <div class="kpi-card glass-panel">
-        <div class="kpi-icon text-green">🧠</div>
-        <div class="kpi-content">
-          <div class="kpi-label">ETA Engine Status</div>
-          <div class="kpi-value text-green-glow" id="kpiEngineStatus">Online • ML v1.2</div>
-          <div class="kpi-sub">Multi-Factor Statistical Forecast</div>
-        </div>
+      <div class="panel" style="padding: 12px 16px; margin: 0; background: var(--bg-panel); border: 1px solid var(--border-strong);">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">On-Time Performance</div>
+        <div style="font-size: 22px; font-weight: 900; color: var(--signal-clear); margin: 2px 0;" id="kpiOnTime">{{ on_time_count }} / {{ active_trains_count }} Trains</div>
+        <div style="font-size: 11px; color: var(--text-dim);">Zero-Delay Status</div>
       </div>
 
-      <div class="kpi-card glass-panel">
-        <div class="kpi-icon text-blue">📡</div>
-        <div class="kpi-content">
-          <div class="kpi-label">Live Data Refresh</div>
-          <div class="kpi-value" id="kpiSyncStatus">10s Auto</div>
-          <div class="kpi-sub">Simulated Railway Data Layer</div>
-        </div>
+      <div class="panel" style="padding: 12px 16px; margin: 0; background: var(--bg-panel); border: 1px solid var(--border-strong);">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Forecasting Engine</div>
+        <div style="font-size: 14px; font-weight: 800; color: var(--smms-green); margin: 6px 0;" id="kpiEngineStatus">ONLINE • ML v1.2</div>
+        <div style="font-size: 11px; color: var(--text-dim);">Multi-Factor Predictive Model</div>
       </div>
-    </section>
 
-    <!-- Main Content Dual Grid -->
-    <div class="main-layout">
+    </div>
 
-      <!-- Left Column: Live Trains List & Simulation Control -->
-      <div class="layout-left">
-        
-        <!-- Live Trains Table Card -->
-        <div class="card glass-panel">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">🔴</span> Live Coaching Train Telemetry
-            </div>
-            <span class="live-tag">LIVE FEED</span>
+    <!-- Main Dual Grid Layout -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+
+      <!-- Left Column: Live Trains List & Simulation Console -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+
+        <!-- Live Train Telemetry Table -->
+        <div class="panel" style="margin: 0;">
+          <div class="panel-header">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--text-bright); display: flex; align-items: center; gap: 6px;">
+              <span style="color: var(--blue-primary);">🚆</span> Live Coaching Train Telemetry
+            </h3>
+            <span class="badge" style="background-color: var(--tms-bg); color: var(--blue-primary); border: 1px solid var(--blue-primary); font-size: 10px; padding: 2px 6px;">
+              SIMULATED LIVE FEED
+            </span>
           </div>
-          <div class="table-responsive">
-            <table class="eta-table" id="trainsTable">
+
+          <div style="overflow-x: auto;">
+            <table class="table-data" id="trainsTable" style="width: 100%; border-collapse: collapse; font-size: 12px;">
               <thead>
-                <tr>
-                  <th>Train</th>
-                  <th>Current Location</th>
-                  <th>Speed</th>
-                  <th>Current Delay</th>
-                  <th>Destination ETA</th>
-                  <th>Confidence</th>
-                  <th>Action</th>
+                <tr style="background-color: var(--bg-panel-subtle); border-bottom: 2px solid var(--border-strong);">
+                  <th style="padding: 8px; text-align: left;">Train</th>
+                  <th style="padding: 8px; text-align: left;">Current Location</th>
+                  <th style="padding: 8px; text-align: left;">Speed</th>
+                  <th style="padding: 8px; text-align: left;">Delay</th>
+                  <th style="padding: 8px; text-align: left;">Predicted ETA</th>
+                  <th style="padding: 8px; text-align: left;">Conf.</th>
+                  <th style="padding: 8px; text-align: center;">Action</th>
                 </tr>
               </thead>
               <tbody id="trainsTableBody">
                 {% for t in trains %}
-                <tr class="train-row {% if forloop.first %}selected-row{% endif %}" data-train-number="{{ t.train_number }}" onclick="selectTrain('{{ t.train_number }}')">
-                  <td>
-                    <div class="train-name-cell">
-                      <span class="train-no">{{ t.train_number }}</span>
-                      <span class="train-title">{{ t.train_name }}</span>
-                    </div>
+                <tr class="train-row {% if forloop.first %}selected-row{% endif %}" data-train-number="{{ t.train_number }}" onclick="selectTrain('{{ t.train_number }}')" style="border-bottom: 1px solid var(--border-mid); cursor: pointer;">
+                  <td style="padding: 8px;">
+                    <strong style="color: var(--blue-primary); font-family: monospace; font-size: 13px;">{{ t.train_number }}</strong><br>
+                    <span style="font-size: 11px; color: var(--text-muted);">{{ t.train_name }}</span>
                   </td>
-                  <td>
-                    <div class="location-cell">
-                      <span class="current-st">{{ t.current_station }}</span>
-                      <span class="next-st">➔ {{ t.next_station }}</span>
-                    </div>
+                  <td style="padding: 8px;">
+                    <strong>{{ t.current_station }}</strong><br>
+                    <span style="font-size: 11px; color: var(--text-muted);">➔ {{ t.next_station }}</span>
                   </td>
-                  <td>
-                    <span class="speed-badge">{{ t.current_speed_kmh|floatformat:0 }} km/h</span>
+                  <td style="padding: 8px; font-family: monospace; font-weight: 700;">
+                    {{ t.current_speed_kmh|floatformat:0 }} km/h
                   </td>
-                  <td>
+                  <td style="padding: 8px;">
                     {% if t.current_delay_minutes > 10 %}
-                      <span class="delay-badge delay-high">+{{ t.current_delay_minutes }} min</span>
+                      <span class="badge" style="background-color: var(--signal-danger-bg); color: var(--signal-danger); border: 1px solid var(--signal-danger); font-weight: 800;">+{{ t.current_delay_minutes }} min</span>
                     {% elif t.current_delay_minutes > 0 %}
-                      <span class="delay-badge delay-medium">+{{ t.current_delay_minutes }} min</span>
+                      <span class="badge" style="background-color: var(--signal-caution-bg); color: var(--text-on-warning); border: 1px solid var(--gold-accent); font-weight: 800;">+{{ t.current_delay_minutes }} min</span>
                     {% else %}
-                      <span class="delay-badge delay-on-time">ON TIME</span>
+                      <span class="badge" style="background-color: var(--signal-clear-bg); color: var(--signal-clear); border: 1px solid var(--signal-clear); font-weight: 800;">ON TIME</span>
                     {% endif %}
                   </td>
-                  <td>
-                    <div class="eta-cell">
-                      <span class="pred-eta">{{ t.destination_predicted_eta }}</span>
-                      <span class="sched-eta">Sched: {{ t.destination_scheduled_eta }}</span>
-                    </div>
+                  <td style="padding: 8px; font-family: monospace;">
+                    <strong style="color: var(--blue-primary); font-size: 13px;">{{ t.destination_predicted_eta }}</strong><br>
+                    <span style="font-size: 10px; color: var(--text-dim);">Sched: {{ t.destination_scheduled_eta }}</span>
                   </td>
-                  <td>
-                    <div class="confidence-pill">
-                      <span class="conf-value">{{ t.overall_confidence_score }}%</span>
-                    </div>
+                  <td style="padding: 8px; font-weight: 800; color: var(--smms-green); font-family: monospace;">
+                    {{ t.overall_confidence_score }}%
                   </td>
-                  <td>
-                    <button class="btn-select-train" onclick="event.stopPropagation(); selectTrain('{{ t.train_number }}')">Inspect</button>
+                  <td style="padding: 8px; text-align: center;">
+                    <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="event.stopPropagation(); selectTrain('{{ t.train_number }}')">Inspect</button>
                   </td>
                 </tr>
                 {% endfor %}
@@ -158,182 +152,181 @@
         </div>
 
         <!-- Dynamic Event Simulation Console (For Judges / Demonstration) -->
-        <div class="card glass-panel simulation-card">
-          <div class="card-header">
-            <div class="card-title text-amber">
-              <span class="icon">🎮</span> Dynamic Event Simulation Console
-            </div>
-            <span class="sim-tag">HACKATHON DEMO CONTROLLER</span>
+        <div class="panel" style="margin: 0; border: 2px solid var(--gold-accent); background: #FFFDF7;">
+          <div class="panel-header" style="border-bottom: 1px solid #EAD8B1;">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--gold-accent); display: flex; align-items: center; gap: 6px;">
+              <span>🎮</span> Dynamic Event Simulation Console
+            </h3>
+            <span class="badge" style="background-color: #FFF4D6; color: #5A4200; border: 1px solid var(--gold-accent); font-size: 10px; padding: 2px 6px;">
+              HACKATHON DEMO CONTROLLER
+            </span>
           </div>
-          <p class="sim-desc">
-            Inject real-time operational events to evaluate how TrackPulse AI dynamically recalculates ETA forecasts, delay propagation, and confidence metrics in real time.
+          
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+            Inject real-time operational events to test how TrackPulse AI dynamically recalculates ETA forecasts, delay propagation, and confidence metrics in real time. Changes actually persist in the backend database.
           </p>
 
-          <div class="simulation-controls">
-            <div class="sim-row">
-              <label for="simTrainSelect">Select Target Train:</label>
-              <select id="simTrainSelect" class="sim-select">
-                <option value="ALL">All Active Trains</option>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <label for="simTrainSelect" style="font-weight: 700; font-size: 12px; color: var(--text-bright);">Target Train:</label>
+              <select id="simTrainSelect" style="flex: 1; padding: 6px 10px; font-size: 12px; font-family: 'Lato', sans-serif; border: 1px solid var(--border-strong); background-color: #FFF;">
+                <option value="ALL">All Active Corridor Trains</option>
                 {% for t in trains %}
                   <option value="{{ t.train_number }}">{{ t.train_number }} — {{ t.train_name }}</option>
                 {% endfor %}
               </select>
             </div>
 
-            <div class="sim-btn-group">
-              <button class="btn-sim sim-delay" onclick="triggerSimulation('ADD_DELAY', 10)">
-                <span>+10m Delay</span>
-              </button>
-              <button class="btn-sim sim-congestion" onclick="triggerSimulation('CONGESTION', 8)">
-                <span>Signal Hold / Congestion</span>
-              </button>
-              <button class="btn-sim sim-stop" onclick="triggerSimulation('UNSCHEDULED_STOP', 12)">
-                <span>Unscheduled Stop</span>
-              </button>
-              <button class="btn-sim sim-weather" onclick="triggerSimulation('WEATHER_FOG', 15)">
-                <span>Fog / Weather Impact</span>
-              </button>
-              <button class="btn-sim sim-clear" onclick="triggerSimulation('CLEAR', 0)">
-                <span>Clear Track (Normal)</span>
-              </button>
-              <button class="btn-sim sim-reset" onclick="resetSimulationFeed()">
-                <span>Reset Baseline</span>
-              </button>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px;">
+              <button class="btn btn-outline btn-sm" style="border-color: #D9534F; color: #D9534F; font-weight: 700;" onclick="triggerSimulation('ADD_DELAY', 10)">+10m Delay</button>
+              <button class="btn btn-outline btn-sm" style="border-color: #B7791F; color: #B7791F; font-weight: 700;" onclick="triggerSimulation('CONGESTION', 8)">Signal Hold / Congestion</button>
+              <button class="btn btn-outline btn-sm" style="border-color: #8B5CF6; color: #8B5CF6; font-weight: 700;" onclick="triggerSimulation('UNSCHEDULED_STOP', 12)">Unscheduled Halt</button>
+              <button class="btn btn-outline btn-sm" style="border-color: #2563EB; color: #2563EB; font-weight: 700;" onclick="triggerSimulation('SPEED_RESTRICTION', 6)">Caution Speed (45 KM/H)</button>
+              <button class="btn btn-outline btn-sm" style="border-color: #64748B; color: #64748B; font-weight: 700;" onclick="triggerSimulation('WEATHER_FOG', 15)">Fog / Weather Impact</button>
+              <button class="btn btn-primary btn-sm" style="background-color: #168B78; border-color: #168B78;" onclick="triggerSimulation('CLEAR', 0)">Clear Track (Normal)</button>
             </div>
           </div>
-          <div id="simNotice" class="sim-notice"></div>
+          <div id="simNotice" style="margin-top: 10px; font-size: 11px; font-family: monospace; font-weight: 700; color: var(--blue-primary); min-height: 16px;"></div>
         </div>
 
       </div>
 
-      <!-- Right Column: Detail View, Baseline vs Dynamic ETA & Charts -->
-      <div class="layout-right">
+      <!-- Right Column: Train Forecast Detail, Baseline vs Dynamic ETA & Charts -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
 
-        <!-- Selected Train Summary & Comparison Card -->
-        <div class="card glass-panel" id="detailCard">
-          <div class="card-header">
-            <div class="card-title" id="selectedTrainTitle">
-              <span class="icon">🎯</span> Train Forecast Breakdown: {{ selected_train.train_number }} - {{ selected_train.train_name }}
-            </div>
-            <span class="train-type-pill" id="selectedTrainType">{{ selected_train.train_type }}</span>
+        <!-- Selected Train Forecast Detail Panel -->
+        <div class="panel" id="detailCard" style="margin: 0;">
+          <div class="panel-header">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--text-bright); display: flex; align-items: center; gap: 6px;" id="selectedTrainTitle">
+              <span>🎯</span> Train Forecast Breakdown: {{ selected_train.train_number }} - {{ selected_train.train_name }}
+            </h3>
+            <span class="badge" style="background-color: var(--tms-bg); color: var(--blue-primary); font-size: 10px;" id="selectedTrainType">{{ selected_train.train_type }}</span>
           </div>
 
-          <!-- Baseline vs Dynamic AI ETA Comparison Banner -->
-          <div class="eta-comparison-banner">
-            <div class="eta-cmp-box sched-box">
-              <div class="cmp-label">STATIC / SCHEDULED ETA</div>
-              <div class="cmp-value" id="cmpSchedEta">{{ selected_train.destination_scheduled_eta }}</div>
-              <div class="cmp-sub" id="cmpDestName">{{ selected_train.destination_name }}</div>
+          <!-- Baseline vs Dynamic AI ETA Banner -->
+          <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; background-color: var(--bg-panel-subtle); border: 1px solid var(--border-strong); padding: 14px; margin-bottom: 12px;">
+            <div>
+              <div style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">STATIC / SCHEDULED ETA</div>
+              <div style="font-size: 26px; font-weight: 900; font-family: monospace; color: var(--text-bright);" id="cmpSchedEta">{{ selected_train.destination_scheduled_eta }}</div>
+              <div style="font-size: 11px; color: var(--text-muted);" id="cmpDestName">{{ selected_train.destination_name }}</div>
             </div>
 
-            <div class="eta-cmp-divider">
-              <div class="cmp-arrow">➔</div>
-              <div class="cmp-diff-badge" id="cmpDiffBadge">+{{ selected_train.destination_delay_minutes }} MIN DELAY</div>
+            <div style="text-align: center;">
+              <div style="font-size: 16px; color: var(--blue-primary); font-weight: 900;">➔</div>
+              <span class="badge" style="background-color: var(--signal-caution-bg); color: var(--text-on-warning); border: 1px solid var(--gold-accent); font-weight: 800; font-size: 10px;" id="cmpDiffBadge">
+                +{{ selected_train.destination_delay_minutes }} MIN DELAY
+              </span>
             </div>
 
-            <div class="eta-cmp-box dynamic-box">
-              <div class="cmp-label">DYNAMIC AI FORECAST ETA</div>
-              <div class="cmp-value" id="cmpDynamicEta">{{ selected_train.destination_predicted_eta }}</div>
-              <div class="cmp-sub">Engine Confidence: <strong id="cmpConfidence">{{ selected_train.overall_confidence_score }}%</strong></div>
+            <div style="background-color: #E6EFFB; border-left: 3px solid var(--blue-primary); padding: 8px 12px;">
+              <div style="font-size: 10px; font-weight: 800; color: var(--blue-primary); text-transform: uppercase;">DYNAMIC AI FORECAST ETA</div>
+              <div style="font-size: 26px; font-weight: 900; font-family: monospace; color: var(--blue-primary);" id="cmpDynamicEta">{{ selected_train.destination_predicted_eta }}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Engine Confidence: <strong id="cmpConfidence">{{ selected_train.overall_confidence_score }}%</strong></div>
             </div>
           </div>
 
-          <!-- Live Operational Context Bar -->
-          <div class="operational-bar">
-            <div class="op-item">
-              <span class="op-label">Current Position:</span>
-              <span class="op-val" id="opLocation">{{ selected_train.current_location }}</span>
+          <!-- Operational Context Bar -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; background-color: var(--bg-panel-header); border: 1px solid var(--border-mid); padding: 8px 12px; margin-bottom: 12px; font-size: 11px;">
+            <div>
+              <span style="color: var(--text-muted);">Current Location:</span><br>
+              <strong style="color: var(--text-bright);" id="opLocation">{{ selected_train.current_location }}</strong>
             </div>
-            <div class="op-item">
-              <span class="op-label">Track Speed:</span>
-              <span class="op-val" id="opSpeed">{{ selected_train.current_speed_kmh|floatformat:0 }} km/h (Max: {{ selected_train.max_speed_kmh }} km/h)</span>
+            <div>
+              <span style="color: var(--text-muted);">Track Speed:</span><br>
+              <strong style="color: var(--text-bright);" id="opSpeed">{{ selected_train.current_speed_kmh|floatformat:0 }} km/h (Max: {{ selected_train.max_speed_kmh }} km/h)</strong>
             </div>
-            <div class="op-item">
-              <span class="op-label">Condition:</span>
-              <span class="op-val highlight-cond" id="opCondition">{{ selected_train.operational_condition }}</span>
+            <div>
+              <span style="color: var(--text-muted);">Operational Condition:</span><br>
+              <strong style="color: var(--gold-accent);" id="opCondition">{{ selected_train.operational_condition }}</strong>
             </div>
           </div>
 
           <!-- Station-Wise Forecast Table -->
-          <div class="table-responsive station-table-wrap">
-            <h4 class="section-heading">Station-Wise ETA Forecast & Delay Propagation</h4>
-            <table class="eta-table station-table">
-              <thead>
-                <tr>
-                  <th>Station</th>
-                  <th>Dist (km)</th>
-                  <th>Sched ETA</th>
-                  <th>Predicted ETA</th>
-                  <th>Delay</th>
-                  <th>Confidence</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="stationForecastBody">
-                {% for st in selected_train.stations_forecast %}
-                <tr class="st-row st-{{ st.status|lower }}">
-                  <td>
-                    <strong>{{ st.name }}</strong>
-                    <span class="st-code">({{ st.code }})</span>
-                  </td>
-                  <td>{{ st.distance_km }} km</td>
-                  <td>{{ st.scheduled_eta }}</td>
-                  <td><strong class="text-cyan">{{ st.predicted_eta }}</strong></td>
-                  <td>
-                    {% if st.delay_minutes > 0 %}
-                      <span class="text-amber">+{{ st.delay_minutes }} min</span>
-                    {% else %}
-                      <span class="text-green">0 min</span>
-                    {% endif %}
-                  </td>
-                  <td>
-                    <div class="conf-bar-wrap">
-                      <div class="conf-bar" style="width: {{ st.confidence_score }}%;"></div>
-                      <span class="conf-num">{{ st.confidence_score }}%</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="st-status-badge st-status-{{ st.status|lower }}">{{ st.status }}</span>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div>
+            <h4 style="font-size: 12px; font-weight: 800; color: var(--text-bright); margin-bottom: 8px; text-transform: uppercase;">
+              Station-Wise Arrival & Delay Propagation
+            </h4>
+            <div style="overflow-x: auto;">
+              <table class="table-data" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                  <tr style="background-color: var(--bg-panel-subtle); border-bottom: 2px solid var(--border-strong);">
+                    <th style="padding: 6px; text-align: left;">Station</th>
+                    <th style="padding: 6px; text-align: left;">Dist (km)</th>
+                    <th style="padding: 6px; text-align: left;">Sched ETA</th>
+                    <th style="padding: 6px; text-align: left;">Predicted ETA</th>
+                    <th style="padding: 6px; text-align: left;">Delay</th>
+                    <th style="padding: 6px; text-align: left;">Confidence</th>
+                    <th style="padding: 6px; text-align: center;">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="stationForecastBody">
+                  {% for st in selected_train.stations_forecast %}
+                  <tr style="border-bottom: 1px solid var(--border-mid);">
+                    <td style="padding: 6px;">
+                      <strong>{{ st.name }}</strong> <span style="color: var(--text-muted); font-family: monospace;">({{ st.code }})</span>
+                    </td>
+                    <td style="padding: 6px;">{{ st.distance_km }} km</td>
+                    <td style="padding: 6px;">{{ st.scheduled_eta }}</td>
+                    <td style="padding: 6px; font-family: monospace;"><strong style="color: var(--blue-primary);">{{ st.predicted_eta }}</strong></td>
+                    <td style="padding: 6px; font-weight: 700;">
+                      {% if st.delay_minutes > 0 %}
+                        <span style="color: var(--red-secondary);">+{{ st.delay_minutes }} min</span>
+                      {% else %}
+                        <span style="color: var(--signal-clear);">0 min</span>
+                      {% endif %}
+                    </td>
+                    <td style="padding: 6px; font-family: monospace; font-weight: 700; color: var(--smms-green);">
+                      {{ st.confidence_score }}%
+                    </td>
+                    <td style="padding: 6px; text-align: center;">
+                      {% if st.status == 'PASSED' %}
+                        <span class="badge" style="background-color: #E2E8F0; color: #64748B;">PASSED</span>
+                      {% elif st.status == 'NEXT' %}
+                        <span class="badge" style="background-color: #E6EFFB; color: var(--blue-primary); border: 1px solid var(--blue-primary);">NEXT</span>
+                      {% else %}
+                        <span class="badge" style="background-color: #F1F5F9; color: #475569;">UPCOMING</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <!-- Engine Feature Importance Panel -->
-        <div class="card glass-panel feature-card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">📊</span> Forecasting Engine Feature Weights & Input Data
-            </div>
+        <!-- Why ETA Changed / Feature Weight Breakdown Panel -->
+        <div class="panel" style="margin: 0;">
+          <div class="panel-header">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--text-bright); display: flex; align-items: center; gap: 6px;">
+              <span>💡</span> Why ETA Changed — Explainable AI Factors
+            </h3>
           </div>
-          <div class="feature-grid" id="featureWeightsContainer">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;" id="featureWeightsContainer">
             {% for f in selected_train.feature_weights %}
-            <div class="feature-item">
-              <div class="feature-name">{{ f.feature }}</div>
-              <div class="feature-weight">{{ f.weight }} Weight</div>
-              <div class="feature-val">{{ f.value }}</div>
+            <div style="background-color: var(--bg-input); border: 1px solid var(--border-mid); padding: 8px 10px;">
+              <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">{{ f.feature }}</div>
+              <div style="font-size: 10px; font-weight: 800; color: var(--blue-primary);">{{ f.weight }} Weight</div>
+              <div style="font-size: 12px; font-weight: 800; color: var(--text-bright); margin-top: 2px;">{{ f.value }}</div>
             </div>
             {% endfor %}
           </div>
         </div>
 
         <!-- Visual Analytics Section (2 Charts) -->
-        <div class="card glass-panel charts-card">
-          <div class="card-header">
-            <div class="card-title">
-              <span class="icon">📈</span> Route ETA Analytics & Delay Propagation
-            </div>
+        <div class="panel" style="margin: 0;">
+          <div class="panel-header">
+            <h3 style="font-size: 14px; font-weight: 800; color: var(--text-bright); display: flex; align-items: center; gap: 6px;">
+              <span>📈</span> Route Analytics & Delay Propagation
+            </h3>
           </div>
-          <div class="charts-grid">
-            <div class="chart-box">
-              <h5>Scheduled vs Dynamic AI ETA (Arrival Minutes)</h5>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div style="background-color: var(--bg-panel-subtle); border: 1px solid var(--border-mid); padding: 10px; height: 180px;">
+              <h5 style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 6px;">Scheduled vs Dynamic AI ETA</h5>
               <canvas id="etaTimelineChart"></canvas>
             </div>
-            <div class="chart-box">
-              <h5>Station Delay Propagation (Minutes)</h5>
+            <div style="background-color: var(--bg-panel-subtle); border: 1px solid var(--border-mid); padding: 10px; height: 180px;">
+              <h5 style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; margin-bottom: 6px;">Section Delay Propagation (Min)</h5>
               <canvas id="delayPropagationChart"></canvas>
             </div>
           </div>
@@ -345,17 +338,18 @@
 
   </main>
 
-  <footer class="eta-footer">
-    <div class="footer-inner">
+  <!-- Official Railway Footer -->
+  <footer class="site-footer" style="background-color: var(--bg-panel-header); border-top: 2px solid var(--border-strong); padding: 12px 18px; margin-top: 24px; font-size: 12px; color: var(--text-muted);">
+    <div style="max-width: 1440px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
       <div>
-        <strong>TRACKPULSE AI</strong> • Indian Railways Dynamic Train ETA Forecasting System • SIH 2026 Problem Statement 26028
+        <strong>INDIAN RAILWAYS — AHMEDABAD DIVISION</strong> • TrackPulse AI Dynamic Train ETA Forecasting (SIH 2026 PS 26028)
       </div>
-      <div class="footer-note">
-        <span>Architecture: Microservices API • Statistical ML Engine v1.2</span>
+      <div style="font-family: monospace; font-size: 11px;">
+        <span>Architecture: Microservices REST API • Multi-Factor Engine v1.2</span>
       </div>
     </div>
   </footer>
 
-  <script src="{% static 'js/eta_app.js' %}?v=1.0"></script>
+  <script src="{% static 'js/eta_app.js' %}?v=2.0"></script>
 </body>
 </html>

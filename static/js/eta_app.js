@@ -53,9 +53,18 @@ async function fetchEtaSummary() {
  */
 function updateKpiMetrics(kpi, lastUpdated) {
     if (!kpi) return;
-    document.getElementById("kpiActiveTrains").textContent = kpi.active_trains_count || 0;
-    document.getElementById("kpiAvgDelay").textContent = `+${kpi.avg_system_delay_minutes || 0} min`;
-    document.getElementById("lastUpdatedLabel").textContent = `Live Sync: ${lastUpdated.split(' ')[1] || lastUpdated}`;
+    const elActive = document.getElementById("kpiActiveTrains");
+    const elDelay = document.getElementById("kpiAvgDelay");
+    const elOnTime = document.getElementById("kpiOnTime");
+    const elUpdated = document.getElementById("lastUpdatedLabel");
+
+    if (elActive) elActive.textContent = kpi.active_trains_count || 0;
+    if (elDelay) elDelay.textContent = `+${kpi.avg_system_delay_minutes || 0} min`;
+    if (elOnTime) elOnTime.textContent = `${kpi.on_time_count || 0} / ${kpi.active_trains_count || 0} Trains`;
+    if (elUpdated) {
+        const timePart = lastUpdated ? (lastUpdated.includes(' ') ? lastUpdated.split(' ')[1] : lastUpdated) : '';
+        elUpdated.textContent = `Live Sync: ${timePart}`;
+    }
 }
 
 /**
@@ -67,42 +76,38 @@ function updateTrainTable(trains) {
 
     tbody.innerHTML = trains.map(t => {
         const isSelected = t.train_number === selectedTrainNumber;
-        const delayClass = t.current_delay_minutes > 10 ? 'delay-high' : (t.current_delay_minutes > 0 ? 'delay-medium' : 'delay-on-time');
+        const delayClass = t.current_delay_minutes > 10 
+            ? 'background-color: #FCE8E6; color: #D9534F; border: 1px solid #D9534F;' 
+            : (t.current_delay_minutes > 0 
+                ? 'background-color: #FFF4D6; color: #5A4200; border: 1px solid #B7791F;' 
+                : 'background-color: #E3F3EA; color: #16845B; border: 1px solid #16845B;');
         const delayText = t.current_delay_minutes > 0 ? `+${t.current_delay_minutes} min` : 'ON TIME';
 
         return `
-            <tr class="train-row ${isSelected ? 'selected-row' : ''}" data-train-number="${t.train_number}" onclick="selectTrain('${t.train_number}')">
-                <td>
-                    <div class="train-name-cell">
-                        <span class="train-no">${t.train_number}</span>
-                        <span class="train-title">${t.train_name}</span>
-                    </div>
+            <tr class="train-row ${isSelected ? 'selected-row' : ''}" data-train-number="${t.train_number}" onclick="selectTrain('${t.train_number}')" style="border-bottom: 1px solid var(--border-mid); cursor: pointer; ${isSelected ? 'background-color: #E6EFFB;' : ''}">
+                <td style="padding: 8px;">
+                    <strong style="color: var(--blue-primary); font-family: monospace; font-size: 13px;">${t.train_number}</strong><br>
+                    <span style="font-size: 11px; color: var(--text-muted);">${t.train_name}</span>
                 </td>
-                <td>
-                    <div class="location-cell">
-                        <span class="current-st">${t.current_station}</span>
-                        <span class="next-st">➔ ${t.next_station}</span>
-                    </div>
+                <td style="padding: 8px;">
+                    <strong>${t.current_station}</strong><br>
+                    <span style="font-size: 11px; color: var(--text-muted);">➔ ${t.next_station}</span>
                 </td>
-                <td>
-                    <span class="speed-badge">${Math.round(t.current_speed_kmh)} km/h</span>
+                <td style="padding: 8px; font-family: monospace; font-weight: 700;">
+                    ${Math.round(t.current_speed_kmh)} km/h
                 </td>
-                <td>
-                    <span class="delay-badge ${delayClass}">${delayText}</span>
+                <td style="padding: 8px;">
+                    <span class="badge" style="${delayClass} font-weight: 800;">${delayText}</span>
                 </td>
-                <td>
-                    <div class="eta-cell">
-                        <span class="pred-eta">${t.destination_predicted_eta}</span>
-                        <span class="sched-eta">Sched: ${t.destination_scheduled_eta}</span>
-                    </div>
+                <td style="padding: 8px; font-family: monospace;">
+                    <strong style="color: var(--blue-primary); font-size: 13px;">${t.destination_predicted_eta}</strong><br>
+                    <span style="font-size: 10px; color: var(--text-dim);">Sched: ${t.destination_scheduled_eta}</span>
                 </td>
-                <td>
-                    <div class="confidence-pill">
-                        <span class="conf-value">${t.overall_confidence_score}%</span>
-                    </div>
+                <td style="padding: 8px; font-weight: 800; color: var(--smms-green); font-family: monospace;">
+                    ${t.overall_confidence_score}%
                 </td>
-                <td>
-                    <button class="btn-select-train" onclick="event.stopPropagation(); selectTrain('${t.train_number}')">Inspect</button>
+                <td style="padding: 8px; text-align: center;">
+                    <button class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 11px;" onclick="event.stopPropagation(); selectTrain('${t.train_number}')">Inspect</button>
                 </td>
             </tr>
         `;
@@ -117,7 +122,8 @@ async function selectTrain(trainNumber) {
     
     // Highlight table row
     document.querySelectorAll(".train-row").forEach(row => {
-        row.classList.toggle("selected-row", row.getAttribute("data-train-number") === trainNumber);
+        const isTarget = row.getAttribute("data-train-number") === trainNumber;
+        row.style.backgroundColor = isTarget ? "#E6EFFB" : "";
     });
 
     try {
@@ -140,46 +146,57 @@ function renderTrainDetails(train) {
     if (!train) return;
 
     // Header & Banner
-    document.getElementById("selectedTrainTitle").innerHTML = `<span class="icon">🎯</span> Train Forecast: ${train.train_number} — ${train.train_name}`;
-    document.getElementById("selectedTrainType").textContent = train.train_type;
+    const elTitle = document.getElementById("selectedTrainTitle");
+    const elType = document.getElementById("selectedTrainType");
 
-    document.getElementById("cmpSchedEta").textContent = train.destination_scheduled_eta;
-    document.getElementById("cmpDestName").textContent = train.destination_name;
-    document.getElementById("cmpDynamicEta").textContent = train.destination_predicted_eta;
-    document.getElementById("cmpDiffBadge").textContent = `+${train.destination_delay_minutes} MIN DELAY`;
-    document.getElementById("cmpConfidence").textContent = `${train.overall_confidence_score}%`;
+    if (elTitle) elTitle.innerHTML = `<span>🎯</span> Train Forecast: ${train.train_number} — ${train.train_name}`;
+    if (elType) elType.textContent = train.train_type;
+
+    const elSched = document.getElementById("cmpSchedEta");
+    const elDest = document.getElementById("cmpDestName");
+    const elDynamic = document.getElementById("cmpDynamicEta");
+    const elDiff = document.getElementById("cmpDiffBadge");
+    const elConf = document.getElementById("cmpConfidence");
+
+    if (elSched) elSched.textContent = train.destination_scheduled_eta;
+    if (elDest) elDest.textContent = train.destination_name;
+    if (elDynamic) elDynamic.textContent = train.destination_predicted_eta;
+    if (elDiff) elDiff.textContent = `+${train.destination_delay_minutes} MIN DELAY`;
+    if (elConf) elConf.textContent = `${train.overall_confidence_score}%`;
 
     // Operational Context Bar
-    document.getElementById("opLocation").textContent = train.current_location;
-    document.getElementById("opSpeed").textContent = `${Math.round(train.current_speed_kmh)} km/h (Max: ${train.max_speed_kmh} km/h)`;
-    document.getElementById("opCondition").textContent = train.operational_condition;
+    const elLoc = document.getElementById("opLocation");
+    const elSpeed = document.getElementById("opSpeed");
+    const elCond = document.getElementById("opCondition");
+
+    if (elLoc) elLoc.textContent = train.current_location;
+    if (elSpeed) elSpeed.textContent = `${Math.round(train.current_speed_kmh)} km/h (Max: ${train.max_speed_kmh} km/h)`;
+    if (elCond) elCond.textContent = train.operational_condition;
 
     // Station Forecast Table
     const stBody = document.getElementById("stationForecastBody");
     if (stBody && train.stations_forecast) {
         stBody.innerHTML = train.stations_forecast.map(st => {
-            const statusLower = (st.status || 'UPCOMING').toLowerCase();
-            const delaySpan = st.delay_minutes > 0 ? `<span class="text-amber">+${st.delay_minutes} min</span>` : `<span class="text-green">0 min</span>`;
+            const delaySpan = st.delay_minutes > 0 ? `<span style="color: var(--red-secondary);">+${st.delay_minutes} min</span>` : `<span style="color: var(--signal-clear);">0 min</span>`;
+            
+            let statusBadge = `<span class="badge" style="background-color: #F1F5F9; color: #475569;">UPCOMING</span>`;
+            if (st.status === 'PASSED') {
+                statusBadge = `<span class="badge" style="background-color: #E2E8F0; color: #64748B;">PASSED</span>`;
+            } else if (st.status === 'NEXT') {
+                statusBadge = `<span class="badge" style="background-color: #E6EFFB; color: var(--blue-primary); border: 1px solid var(--blue-primary);">NEXT</span>`;
+            }
 
             return `
-                <tr class="st-row st-${statusLower}">
-                    <td>
-                        <strong>${st.name}</strong>
-                        <span class="st-code">(${st.code})</span>
+                <tr style="border-bottom: 1px solid var(--border-mid);">
+                    <td style="padding: 6px;">
+                        <strong>${st.name}</strong> <span style="color: var(--text-muted); font-family: monospace;">(${st.code})</span>
                     </td>
-                    <td>${st.distance_km} km</td>
-                    <td>${st.scheduled_eta}</td>
-                    <td><strong class="text-cyan">${st.predicted_eta}</strong></td>
-                    <td>${delaySpan}</td>
-                    <td>
-                        <div class="conf-bar-wrap">
-                            <div class="conf-bar" style="width: ${st.confidence_score}%;"></div>
-                            <span class="conf-num">${st.confidence_score}%</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="st-status-badge st-status-${statusLower}">${st.status}</span>
-                    </td>
+                    <td style="padding: 6px;">${st.distance_km} km</td>
+                    <td style="padding: 6px;">${st.scheduled_eta}</td>
+                    <td style="padding: 6px; font-family: monospace;"><strong style="color: var(--blue-primary);">${st.predicted_eta}</strong></td>
+                    <td style="padding: 6px; font-weight: 700;">${delaySpan}</td>
+                    <td style="padding: 6px; font-family: monospace; font-weight: 700; color: var(--smms-green);">${st.confidence_score}%</td>
+                    <td style="padding: 6px; text-align: center;">${statusBadge}</td>
                 </tr>
             `;
         }).join('');
@@ -189,10 +206,10 @@ function renderTrainDetails(train) {
     const featContainer = document.getElementById("featureWeightsContainer");
     if (featContainer && train.feature_weights) {
         featContainer.innerHTML = train.feature_weights.map(f => `
-            <div class="feature-item">
-                <div class="feature-name">${f.feature}</div>
-                <div class="feature-weight">${f.weight} Weight</div>
-                <div class="feature-val">${f.value}</div>
+            <div style="background-color: var(--bg-input); border: 1px solid var(--border-mid); padding: 8px 10px;">
+                <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">${f.feature}</div>
+                <div style="font-size: 10px; font-weight: 800; color: var(--blue-primary);">${f.weight} Weight</div>
+                <div style="font-size: 12px; font-weight: 800; color: var(--text-bright); margin-top: 2px;">${f.value}</div>
             </div>
         `).join('');
     }
@@ -234,20 +251,20 @@ function renderAnalyticsCharts(train) {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Scheduled ETA (Timeline)',
+                        label: 'Scheduled ETA',
                         data: schedMinutes,
-                        borderColor: '#94a3b8',
-                        borderDash: [5, 5],
+                        borderColor: '#64748B',
+                        borderDash: [4, 4],
                         backgroundColor: 'transparent',
-                        tension: 0.2
+                        tension: 0.1
                     },
                     {
-                        label: 'Dynamic AI Predicted ETA',
+                        label: 'Dynamic AI ETA',
                         data: predMinutes,
-                        borderColor: '#00e5ff',
-                        backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
                         fill: true,
-                        tension: 0.3
+                        tension: 0.2
                     }
                 ]
             },
@@ -255,20 +272,20 @@ function renderAnalyticsCharts(train) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: '#94a3b8' } }
+                    legend: { labels: { color: '#334155', font: { size: 10 } } }
                 },
                 scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#64748B', font: { size: 9 } } },
                     y: { 
                         ticks: { 
-                            color: '#94a3b8',
+                            color: '#64748B',
+                            font: { size: 9 },
                             callback: function(val) {
                                 const h = Math.floor(val / 60) % 24;
                                 const m = val % 60;
                                 return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
                             }
-                        }, 
-                        grid: { color: 'rgba(255,255,255,0.05)' } 
+                        }
                     }
                 }
             }
@@ -285,10 +302,10 @@ function renderAnalyticsCharts(train) {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Calculated Section Delay (Min)',
+                    label: 'Section Delay (Min)',
                     data: delays,
-                    backgroundColor: delays.map(d => d > 10 ? 'rgba(239, 68, 68, 0.7)' : (d > 0 ? 'rgba(245, 158, 11, 0.7)' : 'rgba(16, 185, 129, 0.7)')),
-                    borderColor: delays.map(d => d > 10 ? '#ef4444' : (d > 0 ? '#f59e0b' : '#10b981')),
+                    backgroundColor: delays.map(d => d > 10 ? '#D9534F' : (d > 0 ? '#B7791F' : '#168B78')),
+                    borderColor: delays.map(d => d > 10 ? '#D9534F' : (d > 0 ? '#B7791F' : '#168B78')),
                     borderWidth: 1
                 }]
             },
@@ -296,11 +313,11 @@ function renderAnalyticsCharts(train) {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: '#94a3b8' } }
+                    legend: { labels: { color: '#334155', font: { size: 10 } } }
                 },
                 scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    x: { ticks: { color: '#64748B', font: { size: 9 } } },
+                    y: { ticks: { color: '#64748B', font: { size: 9 } } }
                 }
             }
         });
@@ -334,7 +351,7 @@ async function triggerSimulation(eventType, delayMinutes = 10) {
         if (response.ok) {
             const resultData = await response.json();
             if (resultData.status === "success") {
-                if (notice) notice.textContent = `⚡ Simulated ${eventType}: Forecast dynamically updated!`;
+                if (notice) notice.textContent = `✓ Simulated ${eventType}: Saved to database & ETA recalculated!`;
                 
                 if (resultData.all_trains) {
                     updateTrainTable(resultData.all_trains);
@@ -345,6 +362,8 @@ async function triggerSimulation(eventType, delayMinutes = 10) {
                 } else {
                     fetchEtaSummary();
                 }
+            } else {
+                if (notice) notice.textContent = `Error: ${resultData.message || 'Simulation failed.'}`;
             }
         }
     } catch (err) {
@@ -358,14 +377,14 @@ async function triggerSimulation(eventType, delayMinutes = 10) {
  */
 async function resetSimulationFeed() {
     const notice = document.getElementById("simNotice");
-    if (notice) notice.textContent = "Resetting simulation to baseline timetable...";
+    if (notice) notice.textContent = "Resetting database to timetable baseline...";
 
     try {
         const response = await fetch('/api/eta/reset/', { method: 'POST' });
         if (response.ok) {
             const data = await response.json();
             if (data.status === "success") {
-                if (notice) notice.textContent = "✓ Simulation reset to corridor baseline!";
+                if (notice) notice.textContent = "✓ Timetable reset to baseline!";
                 fetchEtaSummary();
             }
         }
